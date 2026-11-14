@@ -50,6 +50,19 @@
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(buildAll);
   window.addEventListener('load', buildAll, { once: true });
 
+  /* ---------- Hero video: play only when visible and motion is allowed ---------- */
+  const video = document.querySelector('.hero__video');
+  if (video) {
+    let inView = true;
+    const sync = () => {
+      if (reduceMotion.matches || !inView) video.pause();
+      else video.play().catch(() => {}); // autoplay blocked: poster stays
+    };
+    new IntersectionObserver(([e]) => { inView = e.isIntersecting; sync(); }).observe(video);
+    reduceMotion.addEventListener('change', sync);
+    if (reduceMotion.matches) { video.removeAttribute('autoplay'); video.pause(); }
+  }
+
   /* ---------- Mobile nav ---------- */
   const burger = document.querySelector('.nav__burger');
   const links = document.getElementById('nav-links');
