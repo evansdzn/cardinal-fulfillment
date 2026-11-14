@@ -12,6 +12,7 @@
     const group = track.querySelector('.marquee__group');
     track.querySelectorAll('[data-clone]').forEach(n => n.remove());
     el.classList.remove('is-running');
+    el._auto = false;
 
     const active = !reduceMotion.matches && (!el.hasAttribute('data-marquee-mobile') || mobile.matches);
     if (!active) return;
@@ -33,8 +34,63 @@
     track.appendChild(copy);
 
     const speed = Number(el.dataset.speed) || 40; // px per second
+    if (el.hasAttribute('data-marquee-scroll')) { scrollMarquee(el, group, speed); return; }
     el.style.setProperty('--marquee-duration', `${group.scrollWidth / speed}s`);
     el.classList.add('is-running');
+  }
+
+  /* ---------- Scrollable marquee (testimonials) ----------
+     A real overflow container: the user can wheel, swipe, drag or use arrow
+     keys. Each frame nudges scrollLeft forward; position wraps by one group
+     width in both directions so it never runs out. Auto-scroll pauses while
+     the user interacts or hovers and resumes 2s after they stop. */
+  function scrollMarquee(el, group, speed) {
+    const loop = () => group.offsetWidth;
+    let pos = Math.max(1, el.scrollLeft), lastSet = -1, idleUntil = 0, hovering = false, last = 0;
+    const wrap = () => {
+      const w = loop();
+      if (pos >= w) pos -= w;
+      else if (pos < 1) pos += w;
+    };
+    const set = () => { wrap(); el.scrollLeft = pos; lastSet = el.scrollLeft; };
+    const hold = (ms = 2000) => { idleUntil = performance.now() + ms; };
+
+    if (!el._scrollBound) {
+      el._scrollBound = true;
+      el.addEventListener('scroll', () => {
+        if (Math.abs(el.scrollLeft - lastSet) > 1) { pos = el.scrollLeft; hold(); if (pos >= loop() || pos < 1) set(); }
+      }, { passive: true });
+      ['wheel', 'touchstart', 'keydown'].forEach(t => el.addEventListener(t, () => hold(), { passive: true }));
+      el.addEventListener('mouseenter', () => { hovering = true; });
+      el.addEventListener('mouseleave', () => { hovering = false; hold(600); });
+
+      // Mouse drag-to-scroll (touch and trackpads scroll natively)
+      let dragX = null, startPos = 0, moved = false;
+      el.addEventListener('pointerdown', e => {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        dragX = e.clientX; startPos = pos; moved = false; el.classList.add('is-dragging');
+      });
+      window.addEventListener('pointermove', e => {
+        if (dragX === null) return;
+        const dx = e.clientX - dragX;
+        if (Math.abs(dx) > 3) moved = true;
+        pos = startPos - dx; set(); hold();
+      });
+      window.addEventListener('pointerup', () => { if (dragX !== null) { dragX = null; el.classList.remove('is-dragging'); hold(); } });
+      el.addEventListener('click', e => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
+      el.addEventListener('dragstart', e => e.preventDefault());
+
+      const tick = now => {
+        const dt = last ? Math.min(now - last, 64) / 1000 : 0;
+        last = now;
+        if (el._auto && !hovering && dragX === null && now > idleUntil && !document.hidden) { pos += speed * dt; set(); }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+    el._auto = true;
+    el.classList.add('is-scrollable');
+    pos = Math.max(pos, 1); set();
   }
 
   const marquees = [...document.querySelectorAll('[data-marquee]')];
