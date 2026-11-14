@@ -208,3 +208,34 @@
   form.addEventListener('input', e => e.target.classList.remove('is-invalid'));
   syncNext(steps[0]);
 })();
+
+/* ---------- Cascading reveal ---------- */
+(() => {
+  if (!document.documentElement.classList.contains('reveal-on')) return;
+  const groups = [
+    '.hero__content > *', '.channels',
+    '.section__head > *', '.quiz__card',
+    '.step', '.case',
+    '.why__img', '.why__item', '.why__list > .cta',
+    '.quotes', '.section > .cta',
+    '.numbers__inner > *',
+    '.faq__item',
+    '.footer__brand', '.footer__col'
+  ];
+  const els = [...document.querySelectorAll(groups.join(','))];
+  els.forEach(el => { if (!el.dataset.reveal) el.dataset.reveal = el.matches('.why__img') ? 'image' : ''; });
+
+  // Everything that enters in the same frame cascades in document order.
+  const io = new IntersectionObserver(entries => {
+    const entering = entries.filter(e => e.isIntersecting).map(e => e.target)
+      .sort((a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1);
+    entering.forEach((el, i) => {
+      el.style.setProperty('--i', Math.min(i, 8));
+      el.classList.add('is-visible');
+      io.unobserve(el);
+      // Drop the stagger delay afterwards so hover effects stay snappy.
+      el.addEventListener('transitionend', () => el.style.removeProperty('--i'), { once: true });
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+  els.forEach(el => io.observe(el));
+})();

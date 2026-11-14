@@ -199,11 +199,7 @@ legend.quiz__q { margin-bottom: 40px; } /* legends aren't flex items, so gap doe
 .why__item { display: flex; flex-direction: column; gap: 10px; }
 
 /* ---------- Testimonials ---------- */
-/* Gentle edge fade: cards never vanish fully, and the fade is spread over a wider, eased band */
-.quotes { --fade: 140px; width: 100%;
-  -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,.35), rgba(0,0,0,.7) calc(var(--fade) * .4), #000 var(--fade), #000 calc(100% - var(--fade)), rgba(0,0,0,.7) calc(100% - var(--fade) * .4), rgba(0,0,0,.35));
-          mask-image: linear-gradient(90deg, rgba(0,0,0,.35), rgba(0,0,0,.7) calc(var(--fade) * .4), #000 var(--fade), #000 calc(100% - var(--fade)), rgba(0,0,0,.7) calc(100% - var(--fade) * .4), rgba(0,0,0,.35)); }
-@media (max-width: 900px) { .quotes { --fade: 56px; } }
+.quotes { width: 100%; }
 .quotes .marquee__group { align-items: stretch; }
 .quotes { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; cursor: grab; }
 .quotes::-webkit-scrollbar { display: none; }
@@ -335,6 +331,21 @@ legend.quiz__q { margin-bottom: 40px; } /* legends aren't flex items, so gap doe
 
 /* Testimonials without motion: fall back to a swipeable row */
 @media (prefers-reduced-motion: reduce) {
-  .quotes { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
   .quotes .marquee__track { padding: 0 16px; }
 }
+
+/* ---------- Cascading reveal ----------
+   Elements fade and rise into place as they scroll into view. Anything that
+   enters together is staggered by --i (set in script.js). Only active when
+   JS runs and reduced motion is off, so content is never stuck hidden. */
+.reveal-on [data-reveal] { opacity: 0; transform: translate3d(0, 28px, 0);
+  transition: opacity .8s var(--ease-out), transform .9s var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 90ms); }
+.reveal-on [data-reveal].is-visible { opacity: 1; transform: none; }
+
+/* Image variant: the photo wipes open from the bottom and settles from a slight zoom.
+   The clip sits on the img (not the frame) so the frame stays detectable on screen. */
+.reveal-on [data-reveal="image"] { opacity: 1; transform: none; }
+.reveal-on [data-reveal="image"] img { clip-path: inset(100% 0 0 0); transform: scale(1.12);
+  transition: clip-path 1.2s var(--ease-out), transform 1.6s var(--ease-out); }
+.reveal-on [data-reveal="image"].is-visible img { clip-path: inset(0 0 0 0); transform: none; }
